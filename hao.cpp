@@ -1,6 +1,6 @@
 #include<iostream>
 using namespace std;
 int main(){
-printf("阿巴阿爸阿爸");
+printf("阿巴");
 return 0;
 }
