@@ -8,10 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jinzhu/gorm"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
@@ -29,7 +27,7 @@ var jwtKey =[]byte("my_secret_key")
 
 func main() {
 // 连接mysql
-	dsn := "root:12346@tcp(127.0.0.1:3306)/!!!!!?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:123456@tcp(127.0.0.1:3306)/allto?charset=utf8mb4&parseTime=True&loc=Local"
 	var err error
 	db,err =gorm.Open(mysql.Open(dsn),&gorm.Config{})	
 	if err !=nil{
@@ -61,7 +59,7 @@ auth:=r.Group("/api")
 auth.Use(AuthMiddleware())
 {
 	auth.POST("/posts",CreatePost)//f创建帖子
-	auth.GET("/posts",GetPosts) //帖子列表
+	auth.GET("/posts",ListPosts) //帖子列表
 	auth.GET("/posts/:id",GetPost) //帖子详情
 	auth.POST("/posts/:id/like",LikePost) //点赞帖子
 	auth.DELETE("/posts/:id/like",UnlikePost) //取消点赞
@@ -69,7 +67,7 @@ auth.Use(AuthMiddleware())
 	auth.GET("/posts/:id/comments",ListComments) //评论区列表
 }
 
-	log.Println("服务器启动：8080")
+	log.Println("服务器启动:8080")
 	r.Run(":8080")
 
 }
@@ -152,8 +150,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		claims, err := ParseToken(parts[1])
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "无效token"})
-			c.Abort()
-			return
+					c.Abort()
+					return
 		}
 		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
@@ -162,92 +160,92 @@ func AuthMiddleware() gin.HandlerFunc {
 }
 // 接口处理函数
 // 注册
-func Register(c *gin.context){
+func Register(c *gin.Context){
 	var req struct {
 		Username string ``
 		Password string ``
 	}
-	if err:=c.shouldbindjson(&req);err!=nil{
-		c.json(http.StatusBadRequest,gin.h{"error":err.Error()})
+	if err:=c.ShouldBindJSON(&req);err!=nil{
+		c.JSON(http.StatusBadRequest,gin.H{"error":err.Error()})
 		return 
 	}
 	// 检查用户名是否重复
 	var exist User
-	if err:=db.where("username=?",req.Username).First(&exist).Error;err==nil{
-		c.json(http.StatusConflict,gin.H{"error":"用户名已存在"})
+	if err:=db.Where("username=?",req.Username).First(&exist).Error;err==nil{
+		c.JSON(http.StatusConflict,gin.H{"error":"用户名已存在"})
 		return 
 	}
 	//加密密码
 	 hashed,_:=bcrypt.GenerateFromPassword([]byte(req.Password),bcrypt.DefaultCost)
 	 user:=User{Username: req.Username,Password: string(hashed)}
-	 db.create(&user)
-	 c.JSON(http.StatusOK,gin.h{"message":"注册成功","user_id":user.ID})
+	 db.Create(&user)
+	 c.JSON(http.StatusOK,gin.H{"message":"注册成功","user_id":user.ID})
 }
 // 登录
 	func Login (c*gin.Context){
 		var req struct{
-			Username string `json:"用户名" binding:"required"`
-			Password string `json:"密码" binding:"required"`
+			Username string `json:"username" binding:"required"`
+			Password string `json:"password" binding:"required"`
 		}
-		if err:=c.shouldbindjson(&req);err!=nil{
-			c.json(http.StatusBadRequest)
+		if err:=c.ShouldBindJSON(&req);err!=nil{
+			c.JSON(http.StatusBadRequest,gin.H{"error":err.Error()})
 			return
 		}
 
 		var user User
-		if err:=db.where("username=?",req.Username).First(&user).Error;err!=nil{
-			c.json(http.StatusUnauthorized,gin.h{"error":"用户密码错误"})
+		if err:=db.Where("username=?",req.Username).First(&user).Error;err!=nil{
+			c.JSON(http.StatusUnauthorized,gin.H{"error":"用户密码错误"})
 			return
 		}
 		if err:=bcrypt.CompareHashAndPassword([]byte(user.Password),[]byte(req.Password));err!=nil{
-			c.json(http.StatusUnauthorized,gin.H{"error":"用户密码错误"})
+			c.JSON(http.StatusUnauthorized,gin.H{"error":"用户密码错误"})
 			return
 		}
 		token,_:=GenerateToken(user.ID,user.Username)
-		c.json(http.StatusOK,gin.H{"token":token})
+		c.JSON(http.StatusOK,gin.H{"token":token})
 	}
 	// 发帖
 	func CreatePost (c *gin.Context){
 		userID:=c.GetUint("userID")
 		var req struct{
-			Tiele string `json:"title" binding:"required"`
-			Content string `json:"内容" binding:"required"`
+			Title string `json:"title" binding:"required"`
+			Content string `json:"content" binding:"required"`
 		}
-		if err:=c.shouldbindjson(&req);err!=nil{
-				c.json(http.StatusBadRequest,gin.H{"error":err.Error()})
+		if err:=c.ShouldBindJSON(&req);err!=nil{
+				c.JSON(http.StatusBadRequest,gin.H{"error":err.Error()})
 				return 
 			}
 			post :=Post{Title:req.Title,Content:req.Content,UserID:userID}
 			db.Create(&post)
-			c.json(http.StatusOK,post)
+			c.JSON(http.StatusOK,post)
 		
 	}
 	// 帖子列表
-	func ListPosts(c *gin.context){
+	func ListPosts(c *gin.Context){
 		page,_:=strconv.Atoi(c.DefaultQuery("page","1"))
-		pageSize,_:=strconv.Atoi(c.DefaultQuery("page_size",10))
+		pageSize,_:=strconv.Atoi(c.DefaultQuery("page_size", "10"))
 		offset:=(page-1)*pageSize
 		
 		var posts []Post
-		db.Preload("User").Order("created_at desc").Limit(pageSize).offset(offset).Fine(&posts)
+		db.Preload("User").Order("created_at desc").Limit(pageSize).Offset(offset).Find(&posts)
 
 		c.JSON(http.StatusOK,gin.H{"data":posts})
 	}
 	// 帖子详细
 	func GetPost(c *gin.Context){
-		id :=c.param("id")
+		id :=c.Param("id")
 		var post Post
 		if err:=db.Preload("User").First(&post,id).Error;err!=nil{
 			c.JSON(http.StatusNotFound,gin.H{"error":"帖子不存在"})
 			return
 		}
-		rdb.Inrc(ctx,"post_view:",id)
+		rdb.Incr(ctx,"post_view:" + id)
 		c.JSON(http.StatusOK,post)
 	}
 	// 点赞
 	func LikePost(c *gin.Context){
 		userID:=c.GetUint("userID")
-		postID,_:=strconv.Atoi(c.param("id"))
+		postID,_:=strconv.Atoi(c.Param("id"))
 		// 检查帖子是否存在
 		var post Post
 		if err :=db.First(&post,postID).Error;err!=nil{
@@ -256,7 +254,7 @@ func Register(c *gin.context){
 		}
 		//是否已点赞
 		var like Like 
-		err:=db.where("user_id=? and post_id=?",userID,postID).First(&like).Error
+		err:=db.Where("user_id=? and post_id=?",userID,postID).First(&like).Error
 		if err==nil{
 			c.JSON(http.StatusContinue,gin.H{"error":"已经点过赞了"})
 			return
@@ -280,16 +278,16 @@ func Register(c *gin.context){
 	}
 	// 取消点赞
 	func UnlikePost(c *gin.Context){
-		userID:=c.GETUint("userID")
+		userID:=c.GetUint("userID")
 		postID,_:=strconv.Atoi(c.Param("id"))
 		// 事务
 		err:=db.Transaction(func (tx*gorm.DB)error{
 			// 删除点赞记录
-			if err:=tx.where("user_id=? and post_id=?",userID,postID).DELETE(&Like{}).Error;err!=nil{
+			if err:=tx.Where("user_id=? and post_id=?",userID,postID).Delete(&Like{}).Error;err!=nil{
 				return err
 			}
 			// 减少like_count(保证不小于0)
-			if err:=tx.Model(&Post{}).where("id=?",postID).Update("like_count",gorm.Expr("greatest(like_count-1,0)")).Error;err!=nil{
+			if err:=tx.Model(&Post{}).Where("id=?",postID).Update("like_count",gorm.Expr("greatest(like_count-1,0)")).Error;err!=nil{
 				return err 
 			}
 			return nil 
@@ -301,5 +299,40 @@ func Register(c *gin.context){
 		rdb.SRem(ctx,"post_likes:"+c.Param("id"),userID)
 		c.JSON(http.StatusOK,gin.H{"massage":"取消点赞成功"})
 	}
+	// 评论列表o
+	func ListComments(c *gin.Context){
+		postID :=c.Param("id")
+		var comments []Comment	
+		db.Preload("User").Where("post_id=?",postID).Order("created_at desc").Find(&comments)
+		c.JSON(http.StatusOK,comments)
+	}
 	// 发表评论
+	func CreateComment(c *gin.Context){
+		userID:=c.GetUint("userID")
+		postID,err:=strconv.Atoi(c.Param("id"))
+		if err!=nil{
+			c.JSON(http.StatusBadRequest,gin.H{"error":"invalid post id"})
+			return
+		}
 
+		var req struct{
+			Content string `json:"content" binding:"required"`
+		}
+		if err :=c.ShouldBindJSON(&req);err!=nil{
+			c.JSON(http.StatusBadRequest,gin.H{"error":err.Error()})
+			return 
+		}
+		// 检查帖子是否存在、
+		var post Post	
+		if err:=db.First(&post,postID).Error;err!=nil{
+			c.JSON(http.StatusNotFound,gin.H{"error":"帖子不存在"})
+			return 
+		}
+		comment:=Comment{
+			Content:req.Content,
+			UserID:userID,
+			PostID:uint(postID),
+		}
+		db.Create(&comment)
+		c.JSON(http.StatusOK,comment)
+	}
