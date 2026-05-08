@@ -13,7 +13,7 @@ var (
 //  Todo model
 type Todo struct{
 	ID int `json:"id"`
-	Title string `json:""tltle`
+	Title string `json:"title"`
 	Status bool `json:"status"`
 }
 
@@ -51,14 +51,13 @@ func main(){
 
 	//添加
 	v1Group.POST("/todo",func(c *gin.Context) {
-
 	//1..拿去数据
 	var todo Todo
 	c.BindJSON(&todo)
 
 	// 2..存入数据库并返回响应
 		if err :=DB.Create(&todo).Error;err != nil{
-			c.JSON(http.StatusOK,gin.H{"error":err.Error()})
+			c.JSON(http.StatusBadRequest,gin.H{"error":err.Error()})
 		}else{
 			c.JSON(http.StatusOK,todo)
 		}

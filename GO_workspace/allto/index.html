@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AllTo 社交平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #4a5568;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .nav {
+            display: flex;
+            background: #2d3748;
+            padding: 0;
+        }
+        .nav button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: #2d3748;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .nav button:hover {
+            background: #4a5568;
+        }
+        .nav button.active {
+            background: #667eea;
+        }
+        .content {
+            padding: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #4a5568;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #5a67d8;
+        }
+        .btn-secondary {
+            background: #a0aec0;
+        }
+        .btn-secondary:hover {
+            background: #718096;
+        }
+        .post {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .post-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .post-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        .post-content {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .post-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .comment {
+            background: #edf2f7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        .post-meta {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+            display: flex;
+            gap: 20px;
+        }
+        .like-icon {
+            margin-right: 5px;
+        }
+        .likers-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .liker-tag {
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin: 3px;
+        }
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        #postsList {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AllTo 社交平台</h1>
+            <p>简易前端测试界面</p>
+        </div>
+        
+        <div class="nav">
+            <button onclick="showSection('login')" class="active">登录/注册</button>
+            <button onclick="showSection('posts')">帖子列表</button>
+            <button onclick="showSection('create')">发帖</button>
+            <button onclick="showSection('myLikes')">我的点赞</button>
+        </div>
+
+        <div class="content">
+            <!-- 登录/注册区域 -->
+            <div id="login" class="section">
+                <div class="form-group">
+                    <h3>用户注册</h3>
+                    <input type="text" id="regUsername" placeholder="用户名" required>
+                    <input type="password" id="regPassword" placeholder="密码" required style="margin-top: 10px;">
+                    <button class="btn" onclick="register()" style="margin-top: 10px; width: 100%;">注册</button>
+                </div>
+                
+                <div class="form-group" style="margin-top: 30px;">
+                    <h3>用户登录</h3>
+                    <input type="text" id="loginUsername" placeholder="用户名" required>
+                    <input type="password" id="loginPassword" placeholder="密码" required style="margin-top: 10px;">
+                    <button class="btn" onclick="login()" style="margin-top: 10px; width: 100%;">登录</button>
+                </div>
+                
+                <div id="authMessage"></div>
+            </div>
+
+            <!-- 帖子列表区域 -->
+            <div id="posts" class="section hidden">
+                <h3>帖子列表</h3>
+                <button class="btn" onclick="loadPosts()">刷新帖子</button>
+                <div id="postsList" style="margin-top: 20px;"></div>
+            </div>
+
+            <!-- 发帖区域 -->
+            <div id="create" class="section hidden">
+                <h3>创建新帖子</h3>
+                <div class="form-group">
+                    <input type="text" id="postTitle" placeholder="帖子标题" required>
+                </div>
+                <div class="form-group">
+                    <textarea id="postContent" placeholder="帖子内容" rows="4" required></textarea>
+                </div>
+                <button class="btn" onclick="createPost()">发布帖子</button>
+                <div id="postMessage"></div>
+            </div>
+
+            <!-- 我的点赞区域 -->
+            <div id="myLikes" class="section hidden">
+                <h3>我点赞的帖子</h3>
+                <button class="btn" onclick="loadMyLikes()">刷新我的点赞</button>
+                <div id="myLikesList" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+
+        // 显示/隐藏区域
+        function showSection(sectionName) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(sectionName).classList.remove('hidden');
+            
+            // 更新导航按钮状态
+            document.querySelectorAll('.nav button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 如果是帖子区域，自动加载帖子
+            if (sectionName === 'posts') {
+                loadPosts();
+            }
+        }
+
+        // 显示消息
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 5000);
+        }
+
+        // 注册功能
+        async function register() {
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            
+            if (!username || !password) {
+                showMessage('authMessage', '请填写用户名和密码', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('authMessage', '注册成功！请登录', 'success');
+                    document.getElementById('regUsername').value = '';
+                    document.getElementById('regPassword').value = '';
+                } else {
+                    showMessage('authMessage', data.error || '注册失败', 'error');
+                }
+            } catch (error) {
+                showMessage('authMessage', '网络错误: ' + error.message, 'error');
+            }
+        }
+
+        // 登录功能
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showMessage('authMessage', '请填写用户名和密码', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.token) {
+                    token = data.token;
+                    currentUser = data.user;
+                    localStorage.setItem('token', token);
+                    showMessage('authMessage', '登录成功！', 'success');
+                    document.getElementById('loginUsername').value = '';
+                    document.getElementById('loginPassword').value = '';
+                    
+                    // 自动切换到帖子列表
+                    setTimeout(() => showSection('posts'), 1000);
+                } else {
+                    showMessage('authMessage', data.error || '登录失败', 'error');
+                }
+            } catch (error) {
+                showMessage('authMessage', '网络错误: ' + error.message, 'error');
+            }
+        }
+
+        // 加载帖子列表
+        async function loadPosts() {
+            if (!token) {
+                showMessage('postsList', '请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/posts`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const postsList = document.getElementById('postsList');
+                    
+                    // 处理不同的数据格式
+                    let postsArray = [];
+                    if (Array.isArray(data)) {
+                        postsArray = data;
+                    } else if (data.data && Array.isArray(data.data)) {
+                        postsArray = data.data;
+                    } else if (data.posts && Array.isArray(data.posts)) {
+                        postsArray = data.posts;
+                    } else {
+                        console.log('后端返回的数据格式:', data);
+                        postsList.innerHTML = '<p>数据格式错误，请检查后端API</p>';
+                        return;
+                    }
+                    
+                    if (postsArray.length === 0) {
+                        postsList.innerHTML = '<p>暂无帖子</p>';
+                    } else {
+                        postsList.innerHTML = postsArray.map(post => `
+                            <div class="post" id="post-${post.id}">
+                                <div class="post-header">
+                                    <div class="post-title">${post.标题 || post.title || '无标题'}</div>
+                                    <div class="post-meta">
+                                        <span>作者: ${post.用户?.username || post.User?.username || '未知'}</span>
+                                        <span>时间: ${formatTime(post.创建时间 || post.createdAt)}</span>
+                                    </div>
+                                </div>
+                                <div class="post-content">${post.内容 || post.content || '无内容'}</div>
+                                <div class="post-actions">
+                                    <button class="btn" onclick="likePost(${post.id})" id="like-btn-${post.id}">
+                                        <span class="like-icon">❤️</span> 点赞 (${post.点赞数 || post.likeCount || 0})
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="showComments(${post.id})">评论</button>
+                                    <button class="btn btn-secondary" onclick="showLikers(${post.id})">查看点赞列表</button>
+                                </div>
+                                <div id="comments-${post.id}" class="comments-section"></div>
+                                <div id="likers-${post.id}" class="likers-section"></div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    showMessage('postsList', data.error || '加载失败', 'error');
+                }
+            } catch (error) {
+                showMessage('postsList', '网络错误: ' + error.message, 'error');
+            }
+        }
+
+        // 创建帖子
+        async function createPost() {
+            if (!token) {
+                showMessage('postMessage', '请先登录', 'error');
+                return;
+            }
+
+            const title = document.getElementById('postTitle').value;
+            const content = document.getElementById('postContent').value;
+            
+            if (!title || !content) {
+                showMessage('postMessage', '请填写标题和内容', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ title, content })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('postMessage', '发帖成功！', 'success');
+                    document.getElementById('postTitle').value = '';
+                    document.getElementById('postContent').value = '';
+                    loadPosts(); // 刷新帖子列表
+                } else {
+                    showMessage('postMessage', data.error || '发帖失败', 'error');
+                }
+            } catch (error) {
+                showMessage('postMessage', '网络错误: ' + error.message, 'error');
+            }
+        }
+
+        // 点赞帖子
+        async function likePost(postId) {
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/posts/${postId}/like`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadPosts(); // 刷新帖子列表
+                }
+            } catch (error) {
+                console.error('点赞失败:', error);
+            }
+        }
+
+        // 显示评论
+        async function showComments(postId) {
+            const commentsSection = document.getElementById(`comments-${postId}`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/posts/${postId}/comments`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    commentsSection.innerHTML = `
+                        <div class="comment-form">
+                            <input type="text" id="comment-${postId}" placeholder="输入评论" style="width: 70%; padding: 5px;">
+                            <button class="btn" onclick="addComment(${postId})" style="padding: 5px 10px;">发表</button>
+                        </div>
+                        <div class="comments-list">
+                            ${Array.isArray(data) && data.length === 0 ? '<p>暂无评论</p>' : 
+                              Array.isArray(data) ? data.map(comment => `
+                                <div class="comment">
+                                    <strong>${comment.用户信息?.username || '用户'}:</strong>
+                                    ${comment.内容 || comment.content}
+                                </div>
+                              `).join('') : 
+                              '<p>评论数据格式错误</p>'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('加载评论失败:', error);
+            }
+        }
+
+        // 添加评论
+        async function addComment(postId) {
+            const commentInput = document.getElementById(`comment-${postId}`);
+            const content = commentInput.value;
+            
+            if (!content) {
+                alert('请输入评论内容');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/posts/${postId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ content })
+                });
+
+                if (response.ok) {
+                    commentInput.value = '';
+                    showComments(postId); // 刷新评论
+                }
+            } catch (error) {
+                console.error('发表评论失败:', error);
+            }
+        }
+
+        // 格式化时间
+        function formatTime(timeString) {
+            if (!timeString) return '未知';
+            const date = new Date(timeString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // 加载我点赞的帖子
+        async function loadMyLikes() {
+            if (!token) {
+                showMessage('myLikesList', '请先登录', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/posts/likes`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const myLikesList = document.getElementById('myLikesList');
+                    
+                    let likesArray = [];
+                    if (Array.isArray(data)) {
+                        likesArray = data;
+                    } else if (data.data && Array.isArray(data.data)) {
+                        likesArray = data.data;
+                    }
+                    
+                    if (likesArray.length === 0) {
+                        myLikesList.innerHTML = '<p>暂无点赞记录</p>';
+                    } else {
+                        myLikesList.innerHTML = likesArray.map(item => {
+                            const post = item.Post || item.post || item;
+                            return `
+                                <div class="post">
+                                    <div class="post-header">
+                                        <div class="post-title">${post.标题 || post.title || '无标题'}</div>
+                                        <div class="post-meta">
+                                            <span>作者: ${post.用户?.username || post.User?.username || '未知'}</span>
+                                            <span>点赞时间: ${formatTime(item.createdAt || item.创建时间)}</span>
+                                        </div>
+                                    </div>
+                                    <div class="post-content">${post.内容 || post.content || '无内容'}</div>
+                                    <div class="post-actions">
+                                        <button class="btn btn-secondary" onclick="unlikePost(${post.id})">取消点赞</button>
+                                        <button class="btn btn-secondary" onclick="showComments(${post.id})">评论</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                } else {
+                    showMessage('myLikesList', data.error || '加载失败', 'error');
+                }
+            } catch (error) {
+                showMessage('myLikesList', '网络错误: ' + error.message, 'error');
+            }
+        }
+
+        // 查看点赞用户列表
+        async function showLikers(postId) {
+            const likersSection = document.getElementById(`likers-${postId}`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/posts/${postId}/likers`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let likersArray = [];
+                    if (Array.isArray(data)) {
+                        likersArray = data;
+                    } else if (data.data && Array.isArray(data.data)) {
+                        likersArray = data.data;
+                    }
+                    
+                    if (likersArray.length === 0) {
+                        likersSection.innerHTML = '<p>暂无点赞</p>';
+                    } else {
+                        likersSection.innerHTML = `
+                            <h4>点赞用户 (${likersArray.length}人)</h4>
+                            <div class="likers-list">
+                                ${likersArray.map(liker => `
+                                    <span class="liker-tag">${liker.username || liker.Username || '用户'}</span>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('加载点赞列表失败:', error);
+            }
+        }
+
+        // 取消点赞
+        async function unlikePost(postId) {
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/posts/${postId}/like`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    loadMyLikes();
+                    loadPosts();
+                }
+            } catch (error) {
+                console.error('取消点赞失败:', error);
+            }
+        }
+
+        // 更新点赞按钮状态
+        function updateLikeButton(postId, liked, count) {
+            const btn = document.getElementById(`like-btn-${postId}`);
+            if (btn) {
+                btn.innerHTML = `<span class="like-icon">${liked ? '❤️' : '🤍'}</span> 点赞 (${count || 0})`;
+            }
+        }
+
+        // 页面加载时检查登录状态
+        window.onload = function() {
+            if (token) {
+                showSection('posts');
+            }
+        };
+    </script>
+</body>
+</html>

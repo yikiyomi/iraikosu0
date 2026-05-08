@@ -6,12 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func () {
-
+func main() {
 	router := gin.Default()
 
 	router.GET("/cookie", func(c *gin.Context) {
-
 		cookie, err := c.Cookie("gin_cookie")
 
 		if err != nil {

@@ -17,7 +17,7 @@ var userList =[]User{
 	{ID:1,Name:"张三",Age:20},
 	{ID:2,Name:"李四",Age:18},
 }
-func main(){
+func (){
 	r:=gin.Default()
 
 	// 路由组
