@@ -2,6 +2,7 @@
 <module type="DBE_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$/../软件/WeChat/WeChat Files/wxid_els8cvzpuhw822/FileStorage/File/2026-06" />
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

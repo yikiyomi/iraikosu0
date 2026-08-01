@@ -1,0 +1,12 @@
+server:
+  port: ":8080"
+
+database:
+  dsn: "root:123456@tcp(mysql:3306)/allto?charset=utf8mb4&parseTime=True&loc=Local"
+
+redis:
+  addr: "redis:6379"
+  password: ""
+
+jwt:
+  secret: "change-me-in-production"

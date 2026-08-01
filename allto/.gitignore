@@ -1,0 +1,27 @@
+# 编译产物
+/allto.exe
+/allto
+*.exe
+*.test
+*.out
+*.env
+
+# 依赖
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 配置文件（如果里面有密码，不要上传）
+# config.yaml
