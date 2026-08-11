@@ -1,7 +1,7 @@
-ARG GO_VERSION=1.26.1
+ARG GO_VERSION=1.22.5
 
 # 阶段1：下载依赖
-FROM golang:${GO_VERSION} AS deps
+FROM golang:${GO_VERSION}-alpine AS deps
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -18,7 +18,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
     adduser -D -H -s /sbin/nologin app
 WORKDIR /app
 COPY --from=build /out/allto /app/allto
-COPY --from=build /src/config.docker.yaml /app/config.yaml
+COPY --from=build /src/config.yaml /app/config.yaml
 COPY --from=build /src/frontend /app/frontend
 USER app
 EXPOSE 8080
