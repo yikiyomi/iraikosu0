@@ -27,21 +27,25 @@ func SetupRouter() *gin.Engine {
 	//公开接口
 	r.POST("/register", handler.Register)
 	r.POST("/login", handler.Login)
-
+	//而可选接口
+	optional:=r.Group("/api")
+	optional.Use(middleware.AuthMiddleware())
+	{
+		optional.GET("/posts",handler.ListPosts)			//文章列表
+		optional.GET("/posts/:id",handler.GetPost)			//文章详细
+		optional.GET("/posts/:id/comments",handler.ListComments)//评论区
+		optional.GET("/posts/:id/likes",handler.ListPostLikes)//点赞列表
+		optional.GET("/posts/:id/likers",handler.ListPostLikers)//点赞用户列表 
+	}
 	//登录接口
 	auth := r.Group("/api")
 	auth.Use(middleware.AuthMiddleware())
 	{
 		auth.POST("/posts", handler.CreatePost)                 //创建帖子
-		auth.GET("/posts", handler.ListPosts)                   //帖子列表
-		auth.GET("/posts/:id", handler.GetPost)                 //帖子详情
 		auth.POST("/posts/:id/like", handler.LikePost)          //点赞帖子
 		auth.DELETE("/posts/:id/like", handler.UnlikePost)      //取消点赞
 		auth.POST("/posts/:id/comments", handler.CreateComment) //评论
-		auth.GET("/posts/:id/comments", handler.ListComments)   //评论区列表
-		auth.GET("/posts/:id/likes", handler.ListPostLikes)     //获取帖子的点赞列表
 		auth.GET("/posts/likes", handler.ListMyLikes)           //当前用户点赞的帖子列表
-		auth.GET("/posts/:id/likers", handler.ListPostLikers)   //帖子点赞用户列表
 		auth.POST("/follow/:id", handler.FollowUser)            //关注用户
 		auth.DELETE("/follow/:id", handler.UnfollowUser)        //取消关注
 		auth.GET("/following", handler.Listfollowing)           //查看关注列表

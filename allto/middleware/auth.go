@@ -2,7 +2,7 @@ package middleware
 
 import (
     "net/http"
-    "strings"   // 如果需要配置
+    "strings"  
     "github.com/gin-gonic/gin"
 	"allto/util"
 )
@@ -30,6 +30,37 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 		c.Set("userID", claims.UserID)
 		c.Set("username", claims.Username)
+		c.Next()
+	}
+}
+func SoftAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context){
+		authHeader:=c.GetHeader("Authorization")
+		if authHeader==""{
+			// 没token当游客，userid=0
+			c.Set("userID",uint(0))
+			c.Set("username","")
+			c.Next()
+			return 
+		}
+		parts:=strings.SplitN(authHeader," ",2)
+		if len(parts) !=2||parts[0]!="Bearer"{
+			// token格式不对当游客
+			c.Set("userID",uint(0))
+			c.Set("username","")
+			c.Next()
+			return 
+		}
+		claims,err:=util.ParseToken(parts[1])
+		if err!=nil{
+			// token过期当游客
+			c.Set("userID",uint(0))
+			c.Set("username","")
+			c.Next()
+			return 
+		}
+		c.Set("userID",claims.UserID)
+		c.Set("username",claims.Username)
 		c.Next()
 	}
 }

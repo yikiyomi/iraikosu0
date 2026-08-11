@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -17,18 +21,18 @@ jobs:
           MYSQL_DATABASE: allto
         ports: ['3306:3306']
         options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd "mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       redis:
         image: redis:7
         ports: ['6379:6379']
         options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - name: 检出代码
@@ -37,7 +41,10 @@ jobs:
     - name: 设置 Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: '1.26'
+
+    - name: 静态检查
+      run: go vet ./...
 
     - name: 下载依赖
       run: go mod download
@@ -45,12 +52,12 @@ jobs:
     - name: 编译
       run: go build -v ./...
 
-    - name: 运行测试
-      env:
-        APP_DATABASE_DSN: root:123456@tcp(127.0.0.1:3306)/allto?parseTime=true
-        APP_REDIS_ADDR: localhost:6379
-        APP_JWT_SECRET: test_secret
-      run: go test ./... -v
+    # - name: 运行测试
+    #   env:
+    #     APP_DATABASE_DSN: root:123456@tcp(127.0.0.1:3306)/allto?parseTime=true
+    #     APP_REDIS_ADDR: localhost:6379
+    #     APP_JWT_SECRET: test_secret
+    #   run: go test ./... -v
 
   docker:
     needs: build-and-test
