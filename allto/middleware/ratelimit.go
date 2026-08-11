@@ -1,60 +1,48 @@
 package middleware
 
 import (
+	"allto/database"
 	"net/http"
-	"sync"
-	"time"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
-type visitor struct {
-	count    int
-	lastSeen time.Time
-}
+var rateLimitScript=redis.NewScript(`
+	local count=redis.call("INCR",KEYS[1])
+	if count ==1 then
+	redis.call("PEXPIRE",KEYS[1],ARGV[1])
+	end
+	return count
+`)
 
-var visitors = make(map[string]*visitor)
-var mu sync.Mutex
-
-func init() {
-	go func() {
-		for {
-			time.Sleep(time.Minute)
-			mu.Lock()
-			for ip, v := range visitors {
-				if time.Since(v.lastSeen) > time.Minute {
-					delete(visitors, ip)
-				}
-			}
-			mu.Unlock()
-		}
-	}()
-}
 
 func RateLimit(limit int) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
-		mu.Lock()
-		v, exists := visitors[ip]
-		if !exists {
-			visitors[ip] = &visitor{count: 1, lastSeen: time.Now()}
-			mu.Unlock()
+		rdb:=database.GetRedis()
+		if rdb==nil{
+			//若redis不可用则放行，降级策略
 			c.Next()
-			return
+			return 
 		}
-		if time.Since(v.lastSeen) > time.Minute {
-			v.count = 0
-			v.lastSeen = time.Now()
+		key :="rate_limit:"+ c.ClientIP()
+		count, err:=rateLimitScript.Run(
+			database.GetCtx(),
+			rdb,
+			[]string{key},
+			60000,
+		).Int()
+		if err!=nil{
+			//出错放行
+			c.Next()
+			return 
 		}
-		v.count++
-		if v.count > limit {
-			mu.Unlock()
+		if count > limit {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"code": 429,
 				"msg":  "请求过于频繁",
 			})
 			return
 		}
-		mu.Unlock()
 		c.Next()
 	}
 }
