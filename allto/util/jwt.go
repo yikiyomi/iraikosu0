@@ -1,11 +1,17 @@
 package util
 
-import(
-	"errors"
-	"time"
+import (
 	"allto/config"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"time"
+
+	_"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
+
 // jwt密钥
 var jwtKey = []byte("my_secret_key")
 
@@ -23,7 +29,7 @@ func GenerateToken(userID uint, username string) (string, error) {
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -41,4 +47,13 @@ func ParseToken(tokenString string) (*Claims, error) {
 		return claims, nil
 	}
 	return nil, errors.New("invalid token")
+}
+
+// GenerateRandomToken 生成指定字节数的随机十六进制字符串
+func GenerateRefreshToken(bytesLength int) (string, error) {
+    b := make([]byte, bytesLength)
+    if _, err := rand.Read(b); err != nil {
+        return "", fmt.Errorf("生成随机令牌失败: %w", err)
+    }
+    return hex.EncodeToString(b), nil
 }

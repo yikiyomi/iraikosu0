@@ -10,3 +10,10 @@ redis:
 
 jwt:
   secret: "my_secret_key"
+  
+smtp:
+  host: "smtp.qq.com"
+  port: 587         
+  username: "2463301806@qq.com"
+  password: "wzroyvoqpyxddjae"
+  from: "2463301806@qq.com"

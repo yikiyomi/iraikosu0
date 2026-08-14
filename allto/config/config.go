@@ -11,6 +11,7 @@ type Config struct{
 	Database DatabaseConfig
 	Redis RedisConfig
 	JWT JWtConfig
+	SMTP SmtpConfig
 }
 
 type ServerConfig struct{
@@ -25,6 +26,13 @@ type RedisConfig struct{
 }
 type JWtConfig struct{
 	Secret string
+}
+type SmtpConfig struct{
+	Host string 
+  	Port int       
+  	Username string
+  	Password string
+  	From string
 }
 
 var AppConfig *Config
