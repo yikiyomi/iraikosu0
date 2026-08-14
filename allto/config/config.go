@@ -62,6 +62,11 @@ func Load() error {
 	bindEnv("redis.addr")
 	bindEnv("redis.password")
 	bindEnv("jwt.secret")
+	bindEnv("smtp.host")
+    bindEnv("smtp.port")
+    bindEnv("smtp.username")
+    bindEnv("smtp.password")
+    bindEnv("smtp.from")
 	if err := viper.Unmarshal(&AppConfig); err != nil {
 		return fmt.Errorf("解析配置文件失败: %w", err)
 	}

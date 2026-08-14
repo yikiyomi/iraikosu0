@@ -8,7 +8,7 @@ import (
 func SendVerifyEmail(to,verifyLink string) error{
 	//读config配置
 	host:=config.AppConfig.SMTP.Host
-	port:=config.AppConfig.Server.Port
+	port:=config.AppConfig.SMTP.Port
 	username:=config.AppConfig.SMTP.Username
 	password:=config.AppConfig.SMTP.Password
 	from:=config.AppConfig.SMTP.From
@@ -22,7 +22,7 @@ func SendVerifyEmail(to,verifyLink string) error{
           "\r\n" +
           body
 
-      addr := fmt.Sprintf("%s:%s", host, port)
+      addr := fmt.Sprintf("%s:%d", host, port)
       auth := smtp.PlainAuth("", username, password, host)
 
       // 587 端口需要 STARTTLS
