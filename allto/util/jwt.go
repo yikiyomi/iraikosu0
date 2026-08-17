@@ -7,13 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	_"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
-
-// jwt密钥
-var jwtKey = []byte("my_secret_key")
 
 type Claims struct {
 	UserID   uint   `json:"user_id"`
@@ -35,7 +30,7 @@ func GenerateToken(userID uint, username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(getSecret())
 }
-
+//检验token
 func ParseToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return getSecret(), nil

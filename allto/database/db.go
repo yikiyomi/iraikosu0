@@ -2,10 +2,13 @@ package database
 
 import (
 	"context"
+	"errors"
+	"time"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
 // 全局变量
 var (
 	db  *gorm.DB
@@ -30,3 +33,44 @@ func InitRedis(addr, password string) error {
 func GetDB() *gorm.DB { return db }
 func GetRedis() *redis.Client { return rdb }
 func GetCtx() context.Context {return ctx}
+
+ // Lua 脚本：原子 INCR + 条件 PEXPIRE（限流滑动窗口）
+  var incrWithExpireScript = redis.NewScript(`
+  local count = redis.call("INCR", KEYS[1])
+  if count == 1 then
+    redis.call("PEXPIRE", KEYS[1], ARGV[1])
+  end
+  return count
+  `)
+
+  // IncrWithExpire 限流计数：自增并在首次设置过期
+  func IncrWithExpire(key string, ttl time.Duration) (int64, error) {
+        if rdb == nil {
+                return 0, errors.New("redis 未初始化")
+        }
+        return incrWithExpireScript.Run(ctx, rdb, []string{key}, ttl.Milliseconds()).Int64()
+  }
+
+  // SafeIncr 普通自增（阅读数等）
+  func SafeIncr(key string) error {
+        if rdb == nil {
+                return errors.New("redis 未初始化")
+        }
+        return rdb.Incr(ctx, key).Err()
+  }
+
+  // SAdd 集合添加（点赞记录等）
+  func SAdd(key string, member interface{}) error {
+        if rdb == nil {
+                return errors.New("redis 未初始化")
+        }
+        return rdb.SAdd(ctx, key, member).Err()
+  }
+
+  // SRem 集合删除（取消点赞等）
+  func SRem(key string, member interface{}) error {
+        if rdb == nil {
+                return errors.New("redis 未初始化")
+        }
+        return rdb.SRem(ctx, key, member).Err()
+  }

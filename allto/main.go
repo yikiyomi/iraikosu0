@@ -17,11 +17,11 @@ func main() {
 	if err := database.InitDB(config.AppConfig.Database.DSN); err != nil {
     log.Fatal("mysql连接失败:", err)
     }
-	if err := database.InitRedis(
+    if err := database.InitRedis(
 		config.AppConfig.Redis.Addr,
-		config.AppConfig.Redis.Password,
-		); err != nil {
-    log.Fatal("redis连接失败:", err)
+		config.AppConfig.Redis.Password);
+		err != nil {
+    log.Printf("警告: Redis 连接失败，缓存功能降级: %v", err)
     }
 
 	// 自动建表迁移
