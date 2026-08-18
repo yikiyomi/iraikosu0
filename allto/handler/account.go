@@ -22,7 +22,6 @@ func Register(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
-		Email    string `json:"email" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -34,16 +33,7 @@ func Register(c *gin.Context) {
 		response.Conflict(c, "用户名已存在")
 		return
 	}
-	verifyToken,err:=util.GenerateRefreshToken(16)
-	if err!=nil{
-		response.InternalError(c,"生成验证token失败")
-		return
-	}
-	//检查邮箱是否占用
-	if err := database.GetDB().Where("email = ?", req.Email).First(&exist).Error; err == nil {
-        response.Conflict(c, "邮箱已被注册")
-        return
-    }
+	
 	//加密密码
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -51,10 +41,8 @@ func Register(c *gin.Context) {
 		response.InternalError(c, "注册失败,请稍后再试")
 		return
 	}
-	user := model.User{Username: req.Username, Password: string(hashed),Email: req.Email,VerifyToken: verifyToken,}
+	user := model.User{Username: req.Username, Password: string(hashed),}
 	database.GetDB().Create(&user)
-	verifyLink := "http://localhost:8080/verify-email?token=" + verifyToken
-  	go util.SendVerifyEmail(req.Email, verifyLink)
 	response.Success(c, gin.H{"message": "注册成功", "user_id": user.ID})
 }
 
@@ -78,10 +66,6 @@ func Login(c *gin.Context) {
 		response.Unauthorized(c, "密码错误")
 		return
 	}
-	if !user.EmailVerified && user.Email != "" {
-    response.Unauthorized(c, "请先验证邮箱")
-    return
-    }
 	//霜双token并存入数据库
 	token, err := util.GenerateToken(user.ID, user.Username)
 	if err != nil {

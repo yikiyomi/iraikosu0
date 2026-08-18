@@ -3,8 +3,12 @@ package util
 import (
 	"allto/config"
 	"fmt"
+	"log"
 	"net/smtp"
+	"time"
 )
+
+//发邮件
 func SendVerifyEmail(to,verifyLink string) error{
 	//读config配置
 	host:=config.AppConfig.SMTP.Host
@@ -14,7 +18,7 @@ func SendVerifyEmail(to,verifyLink string) error{
 	from:=config.AppConfig.SMTP.From
 	//写邮件
 	subject := "AllTo 博客 - 邮箱验证"
-      body := fmt.Sprintf("点击下面的链接完成邮箱验证：\n\n%s\n\n如果这不是你的操作，请忽略此邮件。", verifyLink)
+      body := fmt.Sprintf("验证码：\n\n%s\n\n如果这不是你的操作，请忽略此邮件。", verifyLink)
       msg := "From: " + from + "\r\n" +
           "To: " + to + "\r\n" +
           "Subject: " + subject + "\r\n" +
@@ -27,4 +31,15 @@ func SendVerifyEmail(to,verifyLink string) error{
 
       // 587 端口需要 STARTTLS
       return smtp.SendMail(addr, auth, from, []string{to}, []byte(msg))
+}
+
+//重试函数
+func SendVerifyEmailWithRetry(to,content string){
+	for attempt:=0;attempt<3;attempt++{
+		if err:=SendVerifyEmail(to,content);err==nil{
+			return
+		}
+		time.Sleep(time.Duration(1<<attempt)*time.Second)
+	}
+	log.Printf("发送失败,已重试三次：%s",to)
 }

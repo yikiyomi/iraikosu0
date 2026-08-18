@@ -11,7 +11,6 @@ type User struct {
 	CreatedAt time.Time 	`json:"created_at"`
 	Email         string    `json:"email"`
     EmailVerified bool      `gorm:"default:false" json:"email_verified"`
-    VerifyToken   string    `json:"-"`
     AvatarUrl     string    `json:"avatar_url"`
     Token         string    `json:"-"`
     RefreshToken  string    `json:"-"`

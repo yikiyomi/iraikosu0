@@ -1,55 +1,72 @@
 package handler
+
 import (
 	"allto/database"
 	"allto/model"
 	"allto/response"
 	"allto/util"
-	"errors"
 	"fmt"
 	"log"
-	"net/http"
+	"math/rand"
 	"net/mail"
+	"time"
+
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
-func VerifyEmail(c *gin.Context) {
-	c.Header("Content-Type", "text/html; charset=utf-8")
 
-	token := c.Query("token")
-	if token == "" {
-		c.String(http.StatusBadRequest, renderVerifyPage("验证链接无效", "链接缺少 token 参数"))
+//验证码校验
+func VerifyEmailCode(c *gin.Context) {
+	var req struct{
+	Email string `json:"email" binding:"required,email"`
+    Code  string `json:"code" binding:"required"`
+	}
+	if err:=c.ShouldBind(&req);err!=nil{
+		response.BadRequest(c,"参数错误")
+		return
+	}
+	//redis中获取验证
+	storedCode, err := database.GetVerifyCode(req.Email) 
+  	if err != nil {
+      if err == redis.Nil {
+          response.BadRequest(c, "验证码过期请重试")
+      } else {
+          response.InternalError(c, "服务端出错")
+      }
+      return
+  	}
+	key:="verify_code:"+req.Email
+	
+	//对比
+	if storedCode!=req.Code{
+		response.BadRequest(c,"验证码错误")
+		return
+	}
+	// 验证成功：更新用户邮箱验证状态
+    var user model.User
+    if err := database.GetDB().Where("email = ?", req.Email).First(&user).Error; err != nil {
+        response.NotFound(c, "用户不存在")
+        return
+    }
+    if err := database.GetDB().Model(&user).Update("email_verified", true).Error; err != nil {
+        response.InternalError(c, "更新验证状态失败")
+        return
+    }
+
+    // 删除 Redis 中的验证码，防止重复使用
+    if err:=database.GetRedis().Del(database.GetCtx(), key);err!=nil{
+		response.BadRequest(c,"验证码清除失败")
 		return
 	}
 
-	var user model.User
-	if err := database.GetDB().Where("verify_token = ?", token).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.String(http.StatusNotFound, renderVerifyPage("验证链接无效或已过期", "请重新绑定邮箱获取新的验证链接"))
-		} else {
-			c.String(http.StatusInternalServerError, renderVerifyPage("服务器错误", "请稍后再试"))
-		}
-		return
-	}
-
-	if err := database.GetDB().Model(&user).Updates(map[string]interface{}{
-		"email_verified": true,
-		"verify_token":   "",
-	}).Error; err != nil {
-		c.String(http.StatusInternalServerError, renderVerifyPage("验证失败", "请稍后再试"))
-		return
-	}
-
-	c.String(http.StatusOK, renderVerifyPage("✅ 验证成功", "你的邮箱已验证，现在可以登录了"))
+    response.Success(c, gin.H{
+        "email_verified": true,
+        "user_id":        user.ID,
+    })
 }
-
-// renderVerifyPage 生成邮箱验证结果页面
-func renderVerifyPage(title, msg string) string {
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>%s</title>
-<style>body{font-family:sans-serif;text-align:center;padding-top:80px;color:#333}h2{font-size:24px}p{color:#666}a{color:#1a73e8}</style>
-</head><body><h2>%s</h2><p>%s</p><p><a href="/static/index.html">返回登录</a></p></body></html>`, title, title, msg)
-}
-func BindEmail(c *gin.Context){
+//发验证码
+func SendVerifyCode(c *gin.Context){
 	userID := c.GetUint("userID")
 	var req struct {
 		Email string `json:"email" binding:"required"`
@@ -59,7 +76,7 @@ func BindEmail(c *gin.Context){
 		return
 	}
 	if _, err := mail.ParseAddress(req.Email); err != nil {
-		response.BadRequest(c, "邮箱格式不正确")
+		response.BadRequest(c, "邮箱格式错误")
 		return
 	}
 
@@ -71,32 +88,25 @@ func BindEmail(c *gin.Context){
 		response.InternalError(c, "系统繁忙，请稍后重试")
 		return
 	}
+	// 把邮箱绑定到当前用户（未验证状态）
+  	if err := database.GetDB().Model(&model.User{}).Where("id = ?", userID).Update("email", req.Email).Error; err != nil {
+      	response.InternalError(c, "更新邮箱失败")
+     	return
+  	}
 
-	// 生成验证 token
-	verifyToken, err := util.GenerateRefreshToken(32)
-	if err != nil {
-		response.InternalError(c, "生成验证token失败")
-		return
-	}
+	// 生成验证 码
+	code:=fmt.Sprintf("%06d",rand.Intn(1000000))
 
-	// 更新邮箱 + 验证 token，并重置验证状态
-	if err := database.GetDB().Model(&model.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
-		"email":          req.Email,
-		"verify_token":   verifyToken,
-		"email_verified": false,
-	}).Error; err != nil {
-		response.InternalError(c, "绑定邮箱失败，请稍后重试")
-		return
-	}
-
+	// 存入redis
+	if err := database.SetVerifyCode(req.Email, code, 5*time.Minute); err != nil {
+      log.Printf("验证码存储失败：%v", err)
+      response.InternalError(c, "验证码发送失败")
+      return
+  	}
+	
 	// 异步发送验证邮件，链接从请求 Host 推断（本地与部署都适用）
 	go func() {
-		scheme := "http"
-		if c.Request.TLS != nil {
-			scheme = "https"
-		}
-		verifyURL := scheme + "://" + c.Request.Host + "/verify-email?token=" + verifyToken
-		if err := util.SendVerifyEmail(req.Email, verifyURL); err != nil {
+		if err := util.SendVerifyEmail(req.Email,"你的验证码的是"+code); err != nil {
 			log.Printf("发送验证邮件失败: user_id=%d, email=%s, err=%v", userID, req.Email, err)
 		}
 	}()

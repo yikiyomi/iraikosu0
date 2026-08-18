@@ -158,7 +158,6 @@
                 <div id="registerForm" class="hidden">
                     <h3>注册</h3>
                     <div class="form-group"><input type="text" id="regUsername" placeholder="用户名"></div>
-                    <div class="form-group"><input type="email" id="regEmail" placeholder="邮箱"></div>
                     <div class="form-group"><input type="password" id="regPassword" placeholder="密码"></div>
                     <button class="btn btn-primary" onclick="register()" style="width:100%;">注册</button>
                     <p style="text-align:center;margin-top:16px;font-size:13px;color:#999;">
@@ -197,10 +196,12 @@
 <div id="bindEmailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:100;">
     <div style="background:#fff;border-radius:10px;padding:24px;width:360px;">
         <h3 style="margin-bottom:8px;">绑定邮箱</h3>
-        <p style="font-size:13px;color:#999;margin-bottom:16px;">为了账号安全，请先绑定邮箱完成验证</p>
-        <input type="email" id="bindEmailInput" placeholder="请输入邮箱" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:16px;">
+        <p style="font-size:13px;color:#999;margin-bottom:16px;">为了账号安全，建议绑定邮箱</p>
+        <input type="email" id="bindEmailInput" placeholder="请输入邮箱" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px;">
+        <input type="text" id="verifyCodeInput" placeholder="输入6位验证码" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px;display:none;">
         <div id="bindEmailMsg"></div>
-        <button class="btn btn-primary" onclick="bindEmail()" style="width:100%;">发送验证邮件</button>
+        <button class="btn btn-primary" id="bindEmailBtn" onclick="sendVerifyCode()" style="width:100%;">发送验证码</button>
+        <button class="btn btn-primary" id="verifyCodeBtn" onclick="verifyCode()" style="width:100%;margin-top:8px;display:none;">验证</button>
         <button class="btn btn-outline" onclick="closeBindEmail()" style="width:100%;margin-top:8px;">暂不绑定</button>
     </div>
 </div>
@@ -353,16 +354,13 @@
 
     async function register() {
         const username = document.getElementById('regUsername').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
         const password = document.getElementById('regPassword').value.trim();
-        if (!username || !email || !password) return showMsg('authMessage', '请填写用户名、邮箱和密码', 'error');
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showMsg('authMessage', '邮箱格式不正确', 'error');
-        const res = await api('POST', '/register', { username, email, password });
+        if (!username || !password) return showMsg('authMessage', '请填写用户名和密码', 'error');
+        const res = await api('POST', '/register', { username, password });
         const data = await res.json();
         if (res.ok) {
-            showMsg('authMessage', '注册成功！请查收邮件完成验证后再登录', 'success');
+            showMsg('authMessage', '注册成功！请登录', 'success');
             document.getElementById('regUsername').value = '';
-            document.getElementById('regEmail').value = '';
             document.getElementById('regPassword').value = '';
             showLoginForm();
         } else {
@@ -388,9 +386,12 @@
             localStorage.setItem('refresh_token', refreshToken);
             updateHeader();
             updateNav();
-            // 老账号没邮箱 → 跳绑定邮箱弹窗
+            // 邮箱状态提示（都可跳过）
             if (!currentUser.email) {
-                showBindEmail();
+                showBindEmail(); // 没邮箱 → 弹绑定邮箱弹窗
+            } else if (!currentUser.email_verified) {
+                showMsg('authMessage', '登录成功！邮箱未验证，可在个人主页补验证', 'success');
+                setTimeout(() => showSection('posts'), 500);
             } else {
                 showMsg('authMessage', '登录成功！', 'success');
                 setTimeout(() => showSection('posts'), 500);
@@ -420,16 +421,33 @@
         showSection('posts');
     }
 
-    async function bindEmail() {
+    async function sendVerifyCode() {
         const email = document.getElementById('bindEmailInput').value.trim();
         if (!email) return showMsg('bindEmailMsg', '请输入邮箱', 'error');
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showMsg('bindEmailMsg', '邮箱格式不正确', 'error');
-        const res = await api('POST', '/api/bindEmail', { email });
+        const res = await api('POST', '/api/send-verify-code', { email });
         const data = await res.json();
         if (res.ok) {
-            showMsg('bindEmailMsg', '验证邮件已发送，请查收', 'success');
+            showMsg('bindEmailMsg', '验证码已发送，请查收', 'success');
+            document.getElementById('verifyCodeInput').style.display = 'block';
+            document.getElementById('verifyCodeBtn').style.display = 'block';
+            document.getElementById('bindEmailBtn').textContent = '重新发送';
         } else {
-            showMsg('bindEmailMsg', data.msg || data.error || '绑定失败', 'error');
+            showMsg('bindEmailMsg', data.msg || data.error || '发送失败', 'error');
+        }
+    }
+
+    async function verifyCode() {
+        const email = document.getElementById('bindEmailInput').value.trim();
+        const code = document.getElementById('verifyCodeInput').value.trim();
+        if (!code) return showMsg('bindEmailMsg', '请输入验证码', 'error');
+        const res = await api('POST', '/verify-email', { email, code });
+        const data = await res.json();
+        if (res.ok) {
+            showMsg('bindEmailMsg', '验证成功！', 'success');
+            setTimeout(() => closeBindEmail(), 800);
+        } else {
+            showMsg('bindEmailMsg', data.msg || data.error || '验证失败', 'error');
         }
     }
 

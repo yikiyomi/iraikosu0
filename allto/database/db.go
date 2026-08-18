@@ -74,3 +74,13 @@ func GetCtx() context.Context {return ctx}
         }
         return rdb.SRem(ctx, key, member).Err()
   }
+  //验证
+  func SetVerifyCode(email, code string, ttl time.Duration) error {
+      if rdb == nil { return errors.New("redis 未初始化") }
+      return rdb.Set(ctx, "verify_code:"+email, code, ttl).Err()
+  }
+
+  func GetVerifyCode(email string) (string, error) {
+      if rdb == nil { return "", errors.New("redis 未初始化") }
+      return rdb.Get(ctx, "verify_code:"+email).Result()
+  }

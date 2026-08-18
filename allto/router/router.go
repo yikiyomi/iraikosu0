@@ -30,7 +30,7 @@ func SetupRouter() *gin.Engine {
 	r.POST("/register", handler.Register)
 	r.POST("/login", handler.Login)
 	r.POST("/refresh", handler.Refresh)
-	r.GET("/verify-email", handler.VerifyEmail)
+	r.POST("/verify-email", handler.VerifyEmailCode)			//验收验证码
 
 	//可选登录接口（登录可选，未登录也能访问）
 	optional := r.Group("/api")
@@ -47,10 +47,11 @@ func SetupRouter() *gin.Engine {
 	auth := r.Group("/api")
 	auth.Use(middleware.AuthMiddleware())
 	{
+		auth.POST("/send-verify-code",handler.SendVerifyCode)		//发送验证码
+		
 		auth.POST("/logout", handler.Logout)                        //登出
 		auth.POST("/rename", handler.Rename)                        //改名
 		auth.POST("/changePassword", handler.ChangePassword)        //改密码
-		auth.POST("/bindEmail", handler.BindEmail)                  //绑定邮箱
 		auth.POST("/avatar", handler.UploadAvatar)                  //上传头像
 		auth.POST("/profile", handler.UpdateProfile)                //修改简介
 		auth.GET("/users/:id", handler.UserProfile)                 //用户资料
