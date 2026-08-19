@@ -31,6 +31,7 @@ func SetupRouter() *gin.Engine {
 	r.POST("/login", handler.Login)
 	r.POST("/refresh", handler.Refresh)
 	r.POST("/verify-email", handler.VerifyEmailCode)			//验收验证码
+	r.GET("/notifications/stream", handler.NotificationStream)
 
 	//可选登录接口（登录可选，未登录也能访问）
 	optional := r.Group("/api")
@@ -47,6 +48,9 @@ func SetupRouter() *gin.Engine {
 	auth := r.Group("/api")
 	auth.Use(middleware.AuthMiddleware())
 	{
+		auth.GET("/notifications",handler.ListNotifications)           //最近50条信息
+		auth.POST("/notifications/markRead",handler.MarkRead)    //标记已读
+		auth.GET("/notifications/unreadCount",handler.UnreadCount)   //未读数
 		auth.POST("/send-verify-code",handler.SendVerifyCode)		//发送验证码
 		
 		auth.POST("/logout", handler.Logout)                        //登出

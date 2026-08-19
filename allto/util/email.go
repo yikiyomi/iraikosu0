@@ -3,9 +3,10 @@ package util
 import (
 	"allto/config"
 	"fmt"
-	"log"
 	"net/smtp"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 //发邮件
@@ -41,5 +42,7 @@ func SendVerifyEmailWithRetry(to,content string){
 		}
 		time.Sleep(time.Duration(1<<attempt)*time.Second)
 	}
-	log.Printf("发送失败,已重试三次：%s",to)
+	Logger.Error("发送失败，已重试三次",
+			zap.String("to",to),
+		)
 }

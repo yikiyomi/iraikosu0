@@ -48,3 +48,12 @@ type Follow struct {
 	FollowingID uint      `gorm:"primaryKey" json:"following_id"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+type Notification struct{
+	ID 	uint 		`gorm:"primaryKey" json:"id"`
+	RecipientID	uint `gorm:"index" json:"recipient_id"`//收消息人
+	SenderID uint	`json:"sender_id"`					//发消息人	
+	Type string	    `json:"type"`						//"like" / "comment" / "follow"
+	TargetID uint	`json:"target_id"`					// 文章ID 或 用户ID
+	IsRead bool			`gorm:"default:false" json:"is_read"`
+	CreatedAt time.Time   `json:"created_at"`
+}

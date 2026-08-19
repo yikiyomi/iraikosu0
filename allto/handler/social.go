@@ -35,6 +35,7 @@ func FollowUser(c *gin.Context) {
 	// 事务;创建关注记录
 	nfollow := model.Follow{FollowID: followID, FollowingID: uint(followingID)}
 	database.GetDB().Create(&nfollow)
+	go Notify(uint(followingID), followID, "follow", uint(followingID))
 	response.Success(c, gin.H{"message": "关注成功"})
 }
 

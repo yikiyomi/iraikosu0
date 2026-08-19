@@ -1,11 +1,14 @@
 package handler
+
 import (
 	"allto/database"
 	"allto/model"
 	"allto/response"
+	"allto/util"
 	"strconv"
-	"log"
+
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -80,8 +83,9 @@ func LikePost(c *gin.Context) {
 	}
 	err=database.SAdd("post_like:"+c.Param("id"),userID)//reids歇逼放行
 	if err!=nil{
-		log.Printf("点赞缓存写入失败(降级): %v", err)
+		util.Logger.Error("点赞缓存写入失败(降级)",zap.Error(err))
 	}
+	go Notify(post.UserID, userID, "like", uint(postID))
 	response.Success(c, "点赞成功")
 }
 
@@ -107,7 +111,7 @@ func UnlikePost(c *gin.Context) {
 	}
 	err=database.SRem("post_like:"+c.Param("id"), userID)//reids歇逼放行
 	if err!=nil{
-		log.Printf("取消点赞缓存删除失败(降级): %v", err)
+		util.Logger.Error("取消点赞缓存删除失败(降级)",zap.Error(err))
 	}
 	response.Success(c, "取消成功")
 }
@@ -148,6 +152,7 @@ func CreateComment(c *gin.Context) {
 		PostID:  uint(postID),
 	}
 	database.GetDB().Create(&comment)
+	go Notify(post.UserID, userID, "comment", uint(postID))
 	response.Success(c, comment)
 }
 // 当前用户点赞列表

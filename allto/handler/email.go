@@ -6,13 +6,13 @@ import (
 	"allto/response"
 	"allto/util"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/mail"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -99,7 +99,7 @@ func SendVerifyCode(c *gin.Context){
 
 	// 存入redis
 	if err := database.SetVerifyCode(req.Email, code, 5*time.Minute); err != nil {
-      log.Printf("验证码存储失败：%v", err)
+	  util.Logger.Error("验证码存储失败",zap.Error(err))
       response.InternalError(c, "验证码发送失败")
       return
   	}
@@ -107,7 +107,7 @@ func SendVerifyCode(c *gin.Context){
 	// 异步发送验证邮件，链接从请求 Host 推断（本地与部署都适用）
 	go func() {
 		if err := util.SendVerifyEmail(req.Email,"你的验证码的是"+code); err != nil {
-			log.Printf("发送验证邮件失败: user_id=%d, email=%s, err=%v", userID, req.Email, err)
+			util.Logger.Error("发送验证邮件失败",zap.Uint("user_id",userID),zap.String("email",req.Email),zap.Error(err))
 		}
 	}()
 

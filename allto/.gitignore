@@ -24,4 +24,4 @@ Thumbs.db
 *.log
 
 # 配置文件（如果里面有密码，不要上传）
-# config.yaml
+*.config.yaml

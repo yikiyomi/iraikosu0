@@ -206,6 +206,18 @@
     </div>
 </div>
 
+<!-- 通知弹窗 -->
+<div id="notificationModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:100;">
+    <div style="background:#fff;border-radius:10px;padding:24px;width:400px;max-height:70%;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3>通知</h3>
+            <button class="btn btn-outline btn-sm" onclick="markAllRead()">全部已读</button>
+        </div>
+        <div id="notificationList"></div>
+        <button class="btn btn-outline" onclick="closeNotifications()" style="width:100%;margin-top:12px;">关闭</button>
+    </div>
+</div>
+
 <script>
     const API_BASE = 'http://localhost:8080';
     let token = localStorage.getItem('token');
@@ -216,6 +228,7 @@
     let likedPostIds = new Set();
     let isRefreshing = false;
     let refreshQueue = [];
+    let eventSource = null;
 
     // ---- 初始化 ----
     if (token) {
@@ -228,6 +241,7 @@
     }
     updateHeader();
     updateNav();
+    if (currentUser) { connectSSE(); loadUnreadCount(); }
 
     function clearAuth() {
         token = null;
@@ -273,7 +287,8 @@
     function updateHeader() {
         const h = document.getElementById('headerRight');
         if (currentUser) {
-            h.innerHTML = `<span class="user-badge" onclick="viewMyProfile()">\u{1F464} ${escapeHTML(currentUser.username)}</span>
+            h.innerHTML = `<span class="user-badge" onclick="showNotifications()" title="通知" style="font-size:16px;">\u{1F514}<span id="unreadBadge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:3px;vertical-align:top;">0</span></span>
+                <span class="user-badge" onclick="viewMyProfile()">\u{1F464} ${escapeHTML(currentUser.username)}</span>
                 <button class="btn-logout" onclick="logout()">退出</button>`;
         } else {
             h.innerHTML = `<span style="color:#999;font-size:14px;cursor:pointer;" onclick="showSection('login')">未登录</span>`;
@@ -386,6 +401,8 @@
             localStorage.setItem('refresh_token', refreshToken);
             updateHeader();
             updateNav();
+            connectSSE();
+            loadUnreadCount();
             // 邮箱状态提示（都可跳过）
             if (!currentUser.email) {
                 showBindEmail(); // 没邮箱 → 弹绑定邮箱弹窗
@@ -405,10 +422,91 @@
         if (token) {
             try { await api('POST', '/api/logout'); } catch (e) {}
         }
+        disconnectSSE();
         clearAuth();
         updateHeader();
         updateNav();
         showSection('posts');
+    }
+
+    // ---- 通知 ----
+    function connectSSE() {
+        if (!token || eventSource) return;
+        eventSource = new EventSource(API_BASE + '/notifications/stream?token=' + token);
+        eventSource.onmessage = function() {
+            loadUnreadCount(); // 收到推送，刷新未读红点
+        };
+        // onerror 不用处理，EventSource 会自动重连
+    }
+
+    function disconnectSSE() {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+    }
+
+    async function loadUnreadCount() {
+        if (!token) return;
+        try {
+            const res = await api('GET', '/api/notifications/unreadCount');
+            const data = await res.json();
+            const d = data.data || {};
+            const count = d.count || 0;
+            const badge = document.getElementById('unreadBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        } catch (e) {}
+    }
+
+    function showNotifications() {
+        document.getElementById('notificationModal').style.display = 'flex';
+        loadNotifications();
+    }
+
+    function closeNotifications() {
+        document.getElementById('notificationModal').style.display = 'none';
+    }
+
+    async function loadNotifications() {
+        const container = document.getElementById('notificationList');
+        const res = await api('GET', '/api/notifications');
+        const data = await res.json();
+        const list = data.data || data || [];
+        if (list.length === 0) {
+            container.innerHTML = '<p style="color:#999;text-align:center;padding:20px;">暂无通知</p>';
+            return;
+        }
+        container.innerHTML = list.map(n => {
+            const text = notifyText(n);
+            const unread = (n.is_read || n.IsRead) ? '' : 'font-weight:600;';
+            return `<div style="padding:12px;border-bottom:1px solid #f0f0f0;${unread}">
+                <div style="font-size:14px;">${text}</div>
+                <div style="font-size:12px;color:#999;">${formatTime(n.created_at || n.CreatedAt)}</div>
+            </div>`;
+        }).join('');
+    }
+
+    async function markAllRead() {
+        const res = await api('POST', '/api/notifications/markRead', {});
+        if (res.ok) {
+            loadUnreadCount();
+            loadNotifications();
+        }
+    }
+
+    function notifyText(n) {
+        const t = n.type || n.Type;
+        if (t === 'like') return '有人点赞了你的文章';
+        if (t === 'comment') return '有人评论了你的文章';
+        if (t === 'follow') return '有人关注了你';
+        return '你有新通知';
     }
 
     // ---- 绑定邮箱 ----

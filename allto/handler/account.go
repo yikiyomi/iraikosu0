@@ -1,4 +1,5 @@
 package handler
+
 import (
 	"allto/database"
 	"allto/model"
@@ -7,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,6 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
 // 注册
 func Register(c *gin.Context) {
 	var req struct {
@@ -37,7 +38,7 @@ func Register(c *gin.Context) {
 	//加密密码
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("密码加密失败")
+		util.Logger.Error("密码加密失败")
 		response.InternalError(c, "注册失败,请稍后再试")
 		return
 	}
@@ -82,7 +83,7 @@ func Login(c *gin.Context) {
 		"refresh_token": refreshToken, // 当前 refresh_token
 	})
 	if result.Error != nil {
-		log.Printf("登陆时的双token存入数据库失败")
+		util.Logger.Error("登陆时的双token存入数据库失败")
 		response.InternalError(c, "token存入数据库失败")
 		return
 	}

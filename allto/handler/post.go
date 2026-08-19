@@ -4,9 +4,11 @@ import (
 	"allto/database"
 	"allto/model"
 	"allto/response"
+	"allto/util"
 	"strconv"
-	"log"
+
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // 发帖
@@ -58,7 +60,7 @@ func GetPost(c *gin.Context) {
 	}
 	err := database.SafeIncr("post_view:" + id)//reids歇逼放行
 	if err != nil {
-		log.Printf("阅读数统计失败(降级): %v", err)
+		util.Logger.Error("阅读数统计失败(降级)",zap.Error(err))
 	}
 	response.Success(c, post)
 }
