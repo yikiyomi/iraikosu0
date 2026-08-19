@@ -14,6 +14,6 @@ jwt:
 smtp:
   host: "smtp.qq.com"
   port: 587         
-  username: "2463301806@qq.com"
+  username: ""
   password: ""
-  from: "2463301806@qq.com"
+  from: ""
