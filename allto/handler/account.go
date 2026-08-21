@@ -67,7 +67,7 @@ func Login(c *gin.Context) {
 		response.Unauthorized(c, "密码错误")
 		return
 	}
-	//霜双token并存入数据库
+	//生成双token并存入数据库
 	token, err := util.GenerateToken(user.ID, user.Username)
 	if err != nil {
 		response.InternalError(c, "token生成失败")
@@ -221,7 +221,7 @@ func Rename(c *gin.Context) {
 	}
 	newToken, err := util.GenerateToken(user.ID, req.NewUsername)
 	if err != nil {
-		response.InternalError(c, "otken生成失败")
+		response.InternalError(c, "token生成失败")
 		return
 	}
 	if err := database.GetDB().Model(&user).Update("token", newToken).Error; err != nil {
@@ -288,9 +288,9 @@ func UserPosts(c *gin.Context) {
 		response.BadRequest(c, "无效用户id")
 		return
 	}
-	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	cursor, err := strconv.Atoi(c.DefaultQuery("cursor", "0"))
 	if err != nil {
-		response.BadRequest(c, "page 页码解析错误")
+		response.BadRequest(c, "cursor 页码解析错误")
 		return
 	}
 	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -301,15 +301,35 @@ func UserPosts(c *gin.Context) {
 	if pageSize > 50 {
 		pageSize = 50
 	}
-	offset := (page - 1) * pageSize
-	var posts []model.Post
-	database.GetDB().Preload("User").
-		Where("user_id = ?", userID). //只查该作者
-		Order("created_at desc").
-		Limit(pageSize).Offset(offset).
-		Find(&posts)
 
-	response.Success(c, posts)
+	var posts []model.Post
+	query:=database.GetDB().Preload("User").
+		Where("user_id = ?", userID). //只查该作者
+		Order("id desc").
+		Limit(pageSize+1)
+	if cursor>0{
+		query=query.Where("id<?",cursor)
+	}
+	if err:=query.Find(&posts).Error;err!=nil{
+		response.InternalError(c,"数据库查询失败")
+		return
+	}
+	// 判断是否有下一页
+	hasMore := len(posts) > pageSize
+	if hasMore {
+		posts = posts[:pageSize]
+	}
+
+	// 计算下一页游标
+	var nextCursor uint
+	if len(posts) > 0 {
+		nextCursor = posts[len(posts)-1].ID
+	}
+	response.Success(c, gin.H{
+		"data":   posts,
+		"next_cursor":  nextCursor,
+		"has_more":   hasMore,
+	})
 }
 
 // refresh token

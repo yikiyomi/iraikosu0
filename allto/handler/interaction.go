@@ -116,7 +116,7 @@ func UnlikePost(c *gin.Context) {
 	response.Success(c, "取消成功")
 }
 
-// 评论列表o
+// 评论列表
 func ListComments(c *gin.Context) {
 	postID := c.Param("id")
 	var comments []model.Comment

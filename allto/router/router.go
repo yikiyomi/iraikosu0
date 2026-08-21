@@ -70,5 +70,6 @@ func SetupRouter() *gin.Engine {
 		auth.GET("/following", handler.Listfollowing)               //查看关注列表
 		auth.GET("/followers", handler.GetFollowers)                //查看粉丝列表
 	}
+	
 	return r
 }

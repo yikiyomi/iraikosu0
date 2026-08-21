@@ -229,6 +229,10 @@
     let isRefreshing = false;
     let refreshQueue = [];
     let eventSource = null;
+    let postsCursor = 0;
+    let postsHasMore = true;
+    let profileCursor = 0;
+    let profileHasMore = true;
 
     // ---- 初始化 ----
     if (token) {
@@ -552,12 +556,39 @@
     // ---- 文章列表 ----
     async function loadPosts() {
         const container = document.getElementById('postsList');
-        const res = await api('GET', '/api/posts');
+        postsCursor = 0;
+        postsHasMore = true;
+        const res = await api('GET', '/api/posts?cursor=0');
         if (!res.ok) { container.innerHTML = '<p class="empty-state">加载失败</p>'; return; }
         const data = await res.json();
-        const posts = Array.isArray(data) ? data : (data.data || []);
-        if (posts.length === 0) { container.innerHTML = '<p class="empty-state">暂无文章</p>'; return; }
-        container.innerHTML = posts.map(p => renderPost(p)).join('');
+        const d = data.data || data;
+        const posts = Array.isArray(d) ? d : (d.data || []);
+        postsCursor = (d && d.next_cursor) || 0;
+        postsHasMore = !!(d && d.has_more);
+        if (posts.length === 0) {
+            container.innerHTML = '<p class="empty-state">暂无文章</p>';
+        } else {
+            container.innerHTML = posts.map(p => renderPost(p)).join('') + loadMoreBtn();
+        }
+    }
+
+    async function loadMorePosts() {
+        const wrap = document.getElementById('loadMoreWrap');
+        if (wrap) wrap.remove();
+        const container = document.getElementById('postsList');
+        const res = await api('GET', '/api/posts?cursor=' + postsCursor);
+        if (!res.ok) return;
+        const data = await res.json();
+        const d = data.data || data;
+        const posts = Array.isArray(d) ? d : (d.data || []);
+        postsCursor = (d && d.next_cursor) || 0;
+        postsHasMore = !!(d && d.has_more);
+        container.insertAdjacentHTML('beforeend', posts.map(p => renderPost(p)).join('') + loadMoreBtn());
+    }
+
+    function loadMoreBtn() {
+        if (!postsHasMore) return '';
+        return '<div id="loadMoreWrap" style="text-align:center;padding:16px;"><button class="btn btn-outline btn-sm" onclick="loadMorePosts()">加载更多</button></div>';
     }
 
     function renderPost(post) {
@@ -651,13 +682,39 @@
 
     async function loadProfilePosts(userId) {
         const container = document.getElementById('profilePosts');
+        profileCursor = 0;
+        profileHasMore = true;
         container.innerHTML = '<p style="text-align:center;padding:20px;color:#999;">加载中…</p>';
         try {
-            const res = await api('GET', '/api/users/' + userId + '/posts');
+            const res = await api('GET', '/api/users/' + userId + '/posts?cursor=0');
             const data = await res.json();
-            const posts = Array.isArray(data) ? data : (data.data || []);
-            container.innerHTML = posts.length === 0 ? '<p class="empty-state">暂无文章</p>' : posts.map(p => renderPost(p)).join('');
+            const d = data.data || data;
+            const posts = Array.isArray(d) ? d : (d.data || []);
+            profileCursor = (d && d.next_cursor) || 0;
+            profileHasMore = !!(d && d.has_more);
+            container.innerHTML = posts.length === 0 ? '<p class="empty-state">暂无文章</p>' : posts.map(p => renderPost(p)).join('') + profileLoadMoreBtn();
         } catch (e) { container.innerHTML = '<p class="empty-state">加载失败</p>'; }
+    }
+
+    async function loadMoreProfilePosts() {
+        const userId = viewingUser ? viewingUser.id : 0;
+        if (!userId) return;
+        const wrap = document.getElementById('profileLoadMoreWrap');
+        if (wrap) wrap.remove();
+        const container = document.getElementById('profilePosts');
+        const res = await api('GET', '/api/users/' + userId + '/posts?cursor=' + profileCursor);
+        if (!res.ok) return;
+        const data = await res.json();
+        const d = data.data || data;
+        const posts = Array.isArray(d) ? d : (d.data || []);
+        profileCursor = (d && d.next_cursor) || 0;
+        profileHasMore = !!(d && d.has_more);
+        container.insertAdjacentHTML('beforeend', posts.map(p => renderPost(p)).join('') + profileLoadMoreBtn());
+    }
+
+    function profileLoadMoreBtn() {
+        if (!profileHasMore) return '';
+        return '<div id="profileLoadMoreWrap" style="text-align:center;padding:16px;"><button class="btn btn-outline btn-sm" onclick="loadMoreProfilePosts()">加载更多</button></div>';
     }
 
     async function loadProfileLikes() {

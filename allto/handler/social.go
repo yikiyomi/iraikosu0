@@ -19,7 +19,7 @@ func FollowUser(c *gin.Context) {
 		response.BadRequest(c, "不能关注自己")
 		return
 	}
-	// 检查关注d用户是否存在
+	// 检查关注的用户是否存在
 	var user model.User
 	if err := database.GetDB().First(&user, followingID).Error; err != nil {
 		response.NotFound(c, "关注的用户不存在")

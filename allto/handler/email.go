@@ -106,7 +106,7 @@ func SendVerifyCode(c *gin.Context){
 	
 	// 异步发送验证邮件，链接从请求 Host 推断（本地与部署都适用）
 	go func() {
-		if err := util.SendVerifyEmail(req.Email,"你的验证码的是"+code); err != nil {
+		if err := util.SendVerifyEmail(req.Email,"你的验证码是"+code); err != nil {
 			util.Logger.Error("发送验证邮件失败",zap.Uint("user_id",userID),zap.String("email",req.Email),zap.Error(err))
 		}
 	}()

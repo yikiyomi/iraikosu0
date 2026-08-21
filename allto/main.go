@@ -7,7 +7,8 @@ import (
 	"allto/router"
 	"allto/util"
 	"log"
-
+	"net/http"
+  _ "net/http/pprof"
 	"go.uber.org/zap"
 )
 
@@ -42,6 +43,13 @@ func main() {
 		&model.Notification{},
 	)
 
+	//pprof
+	go func(){
+		util.Logger.Info("pprof 启动",zap.String("addr",":6060"))
+		if err :=http.ListenAndServe(":6060",nil);err!=nil{
+			util.Logger.Error("pprof 启动失败",zap.Error(err))
+		}
+	}()
 	//初始化gin
 	r := router.SetupRouter()
 	util.Logger.Info("服务启动",zap.String("port",config.AppConfig.Server.Port))
